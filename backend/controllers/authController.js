@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import User from "/models/User.js";
+import { User } from "../models/User.js";
 
 const signToken = (id) => 
     jwt.sign({ id}, process.env.JWT_SECRET, { 
@@ -35,6 +35,40 @@ export const register = async (req, res) => {
             res.status(500).json({message: err.message});
     }
 
+};
+
+export const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email: email?.toLowerCase() });
+
+        if (!user || !(await user.matchPassword(password))) {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+        const token = signToken(user._id);
+        res.json({ user, token });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { name, email, morningMotivation } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        if (name !== undefined) user.name = name;
+        if (email !== undefined) user.email = email.toLowerCase();
+        if (morningMotivation !== undefined) user.morningMotivation = morningMotivation;
+
+        await user.save();
+        res.json({ user });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
 };
 
 export const me = async (req, res) => {
